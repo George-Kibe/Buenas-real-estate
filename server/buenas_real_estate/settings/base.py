@@ -5,20 +5,17 @@ import os
 
 env = environ.Env(DEBUG=(bool, False))
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 environ.Env.read_env(BASE_DIR / ".env" )
 
 # SECURITY WARNING: keep the secret key used in production secret!
-#SECRET_KEY = env("SECRET_KEY")
-SECRET_KEY = "django-insecure-vcrgq_u#6lug)1%+g+o+w*178ruxlp&--nj%tz5r2=cs5x7txs"
+SECRET_KEY = env("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS").split(" ")
 
-
 # Application definition
-
 DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -118,3 +115,71 @@ MEDIA_ROOT = BASE_DIR / 'mediafiles'
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+##configuring loggers
+import logging
+import logging.config
+
+from django.utils.log import DEFAULT_LOGGING
+
+logger = logging.getLogger(__name__)
+#creates or retrieves a python logging instance
+LOG_LEVEL = "INFO"
+
+logging.config.dictConfig({
+    "version":1,
+    "disable_existing_loggers": False,
+    "formatters":{
+        "console":{
+            "format":"%(asctime)s %(name)-12s %(levelname)-8s %(message)s",
+        },
+        "file":{"format":"%(asctime)s %(name)-12s %(levelname)-8s %(message)s",},
+        "django.server":DEFAULT_LOGGING["formatters"]["django.server"],
+    },
+    "handlers":{
+        "console":{
+            "class":"logging.StreamHandler",
+            "formatter":"console",
+        },
+        "file":{
+            "level":"INFO",
+            "class":"logging.FileHandler",
+            "formatter":"file",
+            "filename":"logs/real_estate.log",
+        },
+        "django.server":DEFAULT_LOGGING["handlers"]["django.server"],   
+    },
+    "loggers":{
+        "":{"level":"INFO", "handlers":["console", "file"], "propagate":False },
+        "apps":{"level":"INFO", "handlers":["console"], "propagate":False},
+        "django.server":DEFAULT_LOGGING["loggers"]["django.server"]
+    }
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

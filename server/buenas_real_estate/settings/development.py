@@ -1,7 +1,3 @@
-from typing_extensions import dataclass_transform
-
-import django
-from django.db import DJANGO_VERSION_PICKLE_KEY
 from .base import *
 
 # Database
