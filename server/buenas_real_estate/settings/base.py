@@ -1,6 +1,6 @@
 import environ
 from pathlib import Path
-
+#continue from 1:46 
 import os
 
 env = environ.Env(DEBUG=(bool, False))
@@ -32,6 +32,8 @@ THIRD_PARTY_APPS=[
     "django_filters",
     "django_countries",
     "phonenumber_field",
+    "djoser",
+    "rest_framework_simplejwt"
 ]
 
 LOCAL_APPS=[
