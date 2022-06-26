@@ -27,6 +27,7 @@ class Profile(TimeStampedUUIDModel):
     is_buyer = models.BooleanField(verbose_name=_("Buyer"), default=False, help_text=_("Are you looking for a property"))
     is_seller = models.BooleanField(verbose_name=_("Seller"), default=False, help_text=_("Are you selling a property"))
     is_agent = models.BooleanField(verbose_name=_("Agent"), default=False, help_text=_("Are you an Agent"))
+    top_agent = models.BooleanField(verbose_name=_("Top Agent"), default=False, help_text=_("Are you a Top Agent"))
     rating = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     num_reviews = models.IntegerField(verbose_name=_("Reviews"), default=0, null=True, blank=True)
 
