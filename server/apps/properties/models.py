@@ -108,22 +108,22 @@ class Property(TimeStampedUUIDModel):
         verbose_name=_("Main Photo"), default="/house_sample.jpg", null=True, blank=True
     )
     photo1 = models.ImageField(
-        default="/interior_sample.jpg",
+        default="/interior_sample1.jpg",
         null=True,
         blank=True,
     )
     photo2 = models.ImageField(
-        default="/interior_sample.jpg",
+        default="/interior_sample2.jpg",
         null=True,
         blank=True,
     )
     photo3 = models.ImageField(
-        default="/interior_sample.jpg",
+        default="/interior_sample3.jpg",
         null=True,
         blank=True,
     )
     photo4 = models.ImageField(
-        default="/interior_sample.jpg",
+        default="/interior_sample4.jpg",
         null=True,
         blank=True,
     )
