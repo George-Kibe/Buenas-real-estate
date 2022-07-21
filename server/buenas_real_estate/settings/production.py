@@ -1,7 +1,6 @@
 from .base import *
 
 
-"""
 DATABASES = {
     'default': {
         'ENGINE': env("POSTGRES_ENGINE"),
@@ -12,4 +11,3 @@ DATABASES = {
         'PORT':env('PG_PORT'),
     }
 }
-"""

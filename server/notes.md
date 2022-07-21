@@ -10,4 +10,6 @@ It is a tool used for defining and running multi-container docker applications. 
 
 docker compose up --build -d --remove-orphans
 docker-compose config
-"C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchDaemon
+C:\Program Files\Docker\Docker DockerCli.exe -SwitchDaemon
+
+docker-compose logs
