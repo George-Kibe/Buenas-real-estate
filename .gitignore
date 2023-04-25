@@ -4,6 +4,7 @@
 .DS_Store
 staticfiles
 mediafiles
+migrations
 client/node_modules
 
 # Byte-compiled / optimized / DLL files
