@@ -16,7 +16,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['username', 'first_name','last_name', 'full_name','email', 'id', 'phone_number',
-                'profile_photo', 'about_me','license', 'gender', 'country', 'city', 'is_buyer',
+                'profile_photo', 'about_me','license_info', 'gender', 'country', 'city', 'is_buyer',
                 'is_seller','rating', 'num_reviews', 'reviews']
     def get_full_name(self, obj):
         first_name = obj.user.first_name.title()
@@ -37,7 +37,7 @@ class UpdateProfileSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['phone_number', 'profile_photo',"about_me", 'license','gender',
+        fields = ['phone_number', 'profile_photo',"about_me", 'license_info','gender',
                     'country', 'city', 'is_buyer', 'is_seller', 'is_agent']
     def to_representation(self, instance):
         representation = super().to_representation(instance)

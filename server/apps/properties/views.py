@@ -79,13 +79,13 @@ class PropertyDetailView(APIView):
     #a view is added when you click the detailed view of a property
     def get(self, request, slug):
         property = Property.objects.get(slug=slug)
-
+        # Capture user ip address
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
             ip = x_forwarded_for.split(",")[0]
         else:
             ip = request.META.get("REMOTE_ADDR")
-
+        # print(ip)
         if not PropertyViews.objects.filter(property=property, ip=ip).exists():
             PropertyViews.objects.create(property=property, ip=ip)
 
@@ -96,7 +96,7 @@ class PropertyDetailView(APIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# update a property function 
 @api_view(["PUT"])
 @permission_classes([permissions.IsAuthenticated])
 def update_property_api_view(request, slug):
@@ -118,7 +118,7 @@ def update_property_api_view(request, slug):
         serializer.save()
         return Response(serializer.data)
 
-
+# create a property function 
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def create_property_api_view(request):
@@ -136,7 +136,7 @@ def create_property_api_view(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# delete a property function 
 @api_view(["DELETE"])
 @permission_classes([permissions.IsAuthenticated])
 def delete_property_api_view(request, slug):
@@ -148,7 +148,7 @@ def delete_property_api_view(request, slug):
     user = request.user
     if property.user != user:
         return Response(
-            {"error": "You can't delete a property that doesn't belong to you"},
+            {"error": "You can't delete a property that doesn't belong to you!"},
             status=status.HTTP_403_FORBIDDEN,
         )
 
@@ -161,7 +161,7 @@ def delete_property_api_view(request, slug):
             data["failure"] = "Deletion failed"
         return Response(data=data)
 
-
+# upload property images 
 @api_view(["POST"])
 def uploadPropertyImage(request):
     data = request.data
@@ -192,17 +192,17 @@ class PropertySearchAPIView(APIView):
         queryset = queryset.filter(property_type__iexact=property_type)
 
         price = data["price"]
-        if price == "$0+":
+        if price == "0+":
             price = 0
-        elif price == "$50,000+":
+        elif price == "50,000+":
             price = 50000
-        elif price == "$100,000+":
+        elif price == "100,000+":
             price = 100000
-        elif price == "$200,000+":
+        elif price == "200,000+":
             price = 200000
-        elif price == "$400,000+":
+        elif price == "400,000+":
             price = 400000
-        elif price == "$600,000+":
+        elif price == "600,000+":
             price = 600000
         elif price == "Any":
             price = -1

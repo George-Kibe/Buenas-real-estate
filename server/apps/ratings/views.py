@@ -24,7 +24,7 @@ def create_agent_review(request, profile_id):
     alreadyExists = agent_profile.agent_review.filter(
         agent__pkid=profile_user.pkid
     ).exists()
-
+    print(alreadyExists)
     if alreadyExists:
         formatted_response = {"detail": "Profile already reviewed"}
         return Response(formatted_response, status=status.HTTP_400_BAD_REQUEST)

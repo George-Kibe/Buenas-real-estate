@@ -16,6 +16,7 @@ class AgentListAPIView(generics.ListAPIView):
 """" function based view of the above
 from rest_framework import api_view, permissions
 
+@api_view(["GET])
 @permission_classes((permissions.IsAuthenticated)):
 def get_all_agents(request):
     agents = Profile.objects.filter(is_agent=True)
@@ -34,7 +35,11 @@ class GetProfileAPIView(APIView):
     renderer_classes = [ProfileJSONRenderer]
 
     def get(self, request):
+        print(self, request)
         user = self.request.user
+        print(user)
+        if user is None:
+            raise NotYourProfile
         user_profile = Profile.objects.get(user=user)
         serializer = ProfileSerializer(user_profile, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
