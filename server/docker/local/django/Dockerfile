@@ -1,4 +1,4 @@
-FROM python:3.10.5-slim-buster
+FROM python:3.11.0-slim-buster
 
 ENV APP_HOME=/app
 RUN mkdir $APP_HOME
@@ -9,6 +9,7 @@ LABEL maintainer='georgekibew@gmail.com'
 LABEL website="https://www.comparables.co.ke"
 LABEL decription="Development image for Real Estate Project"
 
+#prevent python generate .pwc files
 ENV PYTHONDONTWRITEBYTECODE 1
 
 ENV PYTHONUNBUFFERED 1
