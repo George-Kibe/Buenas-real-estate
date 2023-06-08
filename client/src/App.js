@@ -1,14 +1,9 @@
-
-
+import React from "react"
 function App() {
   return (
-    <div>
-      <header >
-        <p>Welcome to Buenas real Estate Website</p>
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-      </header>
+    <div className="App">
+      <h1>Real Estate</h1>
+      <p>React</p>
     </div>
   );
 }

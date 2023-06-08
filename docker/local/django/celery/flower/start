@@ -4,9 +4,10 @@ set -o errexit
 
 set -o nounset
 
+celery -A real_estate
 
 worker_ready(){
-    celery real_estate inspect ping
+    celery worker inspect ping
 }
 
 until worker_ready; do 
