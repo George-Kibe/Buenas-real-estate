@@ -1,12 +1,13 @@
 import React from 'react';
-import logo from './logo.svg';
-import { Counter } from './features/counter/Counter';
 import './App.css';
+import Header from './components/Header';
+import Spinner from './components/Spinner';
 
 function App() {
   return (
     <div className="App">
-      <p>Real Estate</p>
+      <Header />
+      <Spinner />
     </div>
   );
 }
