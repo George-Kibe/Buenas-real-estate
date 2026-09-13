@@ -1,0 +1,1614 @@
+{
+  "info": {
+    "_postman_id": "e134fa9c-b340-54bf-af20-aab46304d649",
+    "name": "Buenas Real Estate API",
+    "description": "Every endpoint in the Buenas Real Estate API.\n\n**Getting started**\n1. Start the stack: `make build`.\n2. Seed an activated account: `make seed-demo`. It prints the `email`, `password`, `agentProfileId` and `someoneElsesSlug` to put in your environment.\n3. Import `buenas-real-estate.postman_environment.json` and set `baseUrl` (default http://localhost:8080).\n4. Hit **Run collection** \u2014 *Login* stores the tokens, *Create a property* stores `propertySlug`, and the detail/update/upload/delete calls reuse it.\n\nEvery assertion in here is verified against a live server with `newman run`. The Errors folder asserts the failure paths (401/403/404/400).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Default the base URL when neither scope defines one.",
+          "if (!pm.variables.get('baseUrl')) {",
+          "    pm.collectionVariables.set('baseUrl', 'http://localhost:8080');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "asmith",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "asmith@example.com",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "Str0ngPassw0rd!42",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "propertySlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "profileId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "agentProfileId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "someoneElsesSlug",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "_postman_id": "6012aaf1-9bc7-551a-bdfc-01549ed62fbe",
+      "description": "Registration, JWT and account management (djoser).",
+      "item": [
+        {
+          "name": "Register",
+          "_postman_id": "80be036d-90ca-59f1-ba3a-6c8afc0c263c",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/users/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "users",
+                ""
+              ]
+            },
+            "description": "Creates an **inactive** account and emails an activation link (DJOSER.SEND_ACTIVATION_EMAIL is on), so this account cannot log in until it is activated. It uses a throwaway random identity so it never collides with the seeded login account below.\n\nFor a signed-in session, run `make seed-demo` and use *Login* with the credentials it prints.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"first_name\": \"{{$randomFirstName}}\",\n  \"last_name\": \"{{$randomLastName}}\",\n  \"password\": \"{{password}}\",\n  \"re_password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"registration returns 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login (obtain JWT pair)",
+          "_postman_id": "d1e3cb8a-5085-59cb-b954-158ddfd93f90",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/jwt/create/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "jwt",
+                "create",
+                ""
+              ]
+            },
+            "description": "The login field is the email address, not the username. The account must be active \u2014 run `make seed-demo` to get one.\n\nStores `accessToken` and `refreshToken`; every other request inherits bearer auth from the collection.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"login returns 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set(\"accessToken\", body.access);",
+                  "if (pm.environment.name) { pm.environment.set(\"accessToken\", body.access); }",
+                  "pm.collectionVariables.set(\"refreshToken\", body.refresh);",
+                  "if (pm.environment.name) { pm.environment.set(\"refreshToken\", body.refresh); }",
+                  "",
+                  "pm.test(\"token pair is present\", function () {",
+                  "    pm.expect(body).to.have.property('access');",
+                  "    pm.expect(body).to.have.property('refresh');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh access token",
+          "_postman_id": "1c524cd9-2aa3-54c9-a7fe-47b997ad09a6",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/jwt/refresh/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "jwt",
+                "refresh",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"refresh returns 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const access = pm.response.json().access;",
+                  "pm.collectionVariables.set(\"accessToken\", access);",
+                  "if (pm.environment.name) { pm.environment.set(\"accessToken\", access); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify access token",
+          "_postman_id": "5d963ec9-7cc0-56d8-af0d-e8916717311d",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/jwt/verify/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "jwt",
+                "verify",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{accessToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Current user",
+          "_postman_id": "8a1e85f9-441e-5423-afcd-5b8d54b877a8",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/users/me/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "users",
+                "me",
+                ""
+              ]
+            },
+            "description": "Rendered by apps/users/serializers.py::UserSerializer."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns the signed-in user\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().email).to.eql(pm.variables.get('email'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Request a password reset",
+          "_postman_id": "0a5ca769-cacb-559b-99ea-be23ec29df67",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/users/reset_password/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "users",
+                "reset_password",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Change password",
+          "_postman_id": "63084d78-9ad6-5ef8-91d4-546c1131d767",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/users/set_password/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "users",
+                "set_password",
+                ""
+              ]
+            },
+            "description": "Changes the account password and updates the `password` variable so later runs still authenticate.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{password}}\",\n  \"new_password\": \"An0therStr0ng!Pass\",\n  \"re_new_password\": \"An0therStr0ng!Pass\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"password change returns 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});",
+                  "pm.collectionVariables.set(\"password\", \"An0therStr0ng!Pass\");",
+                  "if (pm.environment.name) { pm.environment.set(\"password\", \"An0therStr0ng!Pass\"); }"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "_postman_id": "c2e1e8e8-2f40-54c3-a635-53723d827ba5",
+      "description": "The profile attached to each user.",
+      "item": [
+        {
+          "name": "My profile",
+          "_postman_id": "c354a3e3-816b-57f0-8a9d-0ee182b9f64c",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/me/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "me",
+                ""
+              ]
+            },
+            "description": "The body is namespaced under a `Profile` key by apps/profiles/renderers.py. Error bodies are not wrapped."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns a wrapped profile\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('Profile');",
+                  "});",
+                  "",
+                  "const profile = pm.response.json().Profile;",
+                  "pm.collectionVariables.set(\"profileId\", profile.id);",
+                  "if (pm.environment.name) { pm.environment.set(\"profileId\", profile.id); }",
+                  "if (profile.is_agent) {",
+                  "    pm.collectionVariables.set(\"agentProfileId\", profile.id);",
+                  "    if (pm.environment.name) { pm.environment.set(\"agentProfileId\", profile.id); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update my profile",
+          "_postman_id": "f217dfc5-8ba3-5bef-a9f1-826ccc801f39",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/update/{{username}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "update",
+                "{{username}}",
+                ""
+              ]
+            },
+            "description": "You may only update your own profile; anyone else gets a 403.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"about_me\": \"Agent covering Nairobi and the Rift Valley.\",\n  \"city\": \"Nakuru\",\n  \"country\": \"KE\",\n  \"phone_number\": \"+254712345678\",\n  \"is_agent\": true,\n  \"is_seller\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List agents",
+          "_postman_id": "fadd13c0-41bb-5d5f-bdf0-865a276fb162",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/agents/all/?page=1&page_size=12",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "agents",
+                "all",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "page_size",
+                  "value": "12",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List top agents",
+          "_postman_id": "7d507f12-57fa-5e5e-922a-4019c2c054da",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/top-agents/all/?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "top-agents",
+                "all",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "_postman_id": "0222f6ff-65ba-55a0-b783-63f450d709a6",
+      "description": "Listings: browse, create, update, delete.",
+      "item": [
+        {
+          "name": "List properties",
+          "_postman_id": "ea53ca03-e159-596d-bae1-2bef34fdf057",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/all/?page=1&page_size=12&ordering=-created_at",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "all",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "page_size",
+                  "value": "12",
+                  "disabled": false
+                },
+                {
+                  "key": "ordering",
+                  "value": "-created_at",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "Public. 12 per page by default.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"returns a paginated envelope\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.have.property('results');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List properties (filtered)",
+          "_postman_id": "5ebf5193-82b5-5783-9cd6-12785b653171",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/all/?advert_type=For Sale&property_type=House&price__lt=20000000&search=Naivasha&ordering=price",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "all",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "advert_type",
+                  "value": "For Sale",
+                  "disabled": false
+                },
+                {
+                  "key": "property_type",
+                  "value": "House",
+                  "disabled": false
+                },
+                {
+                  "key": "price__lt",
+                  "value": "20000000",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "Naivasha",
+                  "disabled": false
+                },
+                {
+                  "key": "ordering",
+                  "value": "price",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "advert_type, property_type, price, price__gt, price__lt, search, ordering.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a property",
+          "_postman_id": "90ff4bdb-303c-5770-a1f9-2133cd2af004",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/create/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "create",
+                ""
+              ]
+            },
+            "description": "The owner comes from the access token. `user`, `slug`, `ref_code` and `views` in the body are ignored.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lakeside villa in Naivasha\",\n  \"description\": \"A calm three bedroom home looking over Lake Naivasha.\",\n  \"country\": \"KE\",\n  \"city\": \"Naivasha\",\n  \"postal_code\": \"20117\",\n  \"street_address\": \"Moi South Lake Road\",\n  \"property_number\": 42,\n  \"price\": \"12500000.00\",\n  \"tax\": \"0.15\",\n  \"plot_area\": \"450.00\",\n  \"total_floors\": 2,\n  \"bedrooms\": 3,\n  \"bathrooms\": \"2.50\",\n  \"advert_type\": \"For Sale\",\n  \"property_type\": \"House\",\n  \"published_status\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"creation returns 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "const created = pm.response.json();",
+                  "pm.collectionVariables.set(\"propertySlug\", created.slug);",
+                  "if (pm.environment.name) { pm.environment.set(\"propertySlug\", created.slug); }",
+                  "",
+                  "pm.test(\"server owns slug and ref_code\", function () {",
+                  "    pm.expect(created.slug).to.be.a('string').and.not.empty;",
+                  "    pm.expect(created.ref_code).to.have.lengthOf(10);",
+                  "    pm.expect(created.views).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Property detail",
+          "_postman_id": "7b9381ee-0902-5a9b-a002-33068226b004",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/details/{{propertySlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "details",
+                "{{propertySlug}}",
+                ""
+              ]
+            },
+            "description": "Public. The first request from a given IP increments `views`.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a property (PATCH)",
+          "_postman_id": "1094d99e-2c70-5ff7-adff-566f0cd19e6c",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/update/{{propertySlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "update",
+                "{{propertySlug}}",
+                ""
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"Nakuru\",\n  \"price\": \"13750000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update a property (PUT)",
+          "_postman_id": "9b1be158-2e80-5375-9007-4dafc19f54fe",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/update/{{propertySlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "update",
+                "{{propertySlug}}",
+                ""
+              ]
+            },
+            "description": "PUT is a full replacement; PATCH is partial.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Lakeside villa in Naivasha\",\n  \"description\": \"A calm three bedroom home looking over Lake Naivasha.\",\n  \"country\": \"KE\",\n  \"city\": \"Naivasha\",\n  \"postal_code\": \"20117\",\n  \"street_address\": \"Moi South Lake Road\",\n  \"property_number\": 42,\n  \"price\": \"12500000.00\",\n  \"tax\": \"0.15\",\n  \"plot_area\": \"450.00\",\n  \"total_floors\": 2,\n  \"bedrooms\": 3,\n  \"bathrooms\": \"2.50\",\n  \"advert_type\": \"For Sale\",\n  \"property_type\": \"House\",\n  \"published_status\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My listings",
+          "_postman_id": "d331797e-43cc-5686-9790-fdf7b850c9e2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/agents/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "agents",
+                ""
+              ]
+            },
+            "description": "Only the properties owned by the signed-in user."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "View records for my listings",
+          "_postman_id": "987cb6f4-3d3c-53d4-934a-0115176da7dc",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/views/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "views",
+                ""
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload property photos",
+          "_postman_id": "fd679ada-d0b4-5578-beee-34b8eb9f63af",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/upload-image/{{propertySlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "upload-image",
+                "{{propertySlug}}",
+                ""
+              ]
+            },
+            "description": "multipart/form-data. Only the fields you send are replaced \u2014 pick files in Postman's Body tab before sending.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "cover_photo",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "photo1",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "photo2",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "photo3",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                },
+                {
+                  "key": "photo4",
+                  "type": "file",
+                  "src": [],
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search properties",
+          "_postman_id": "44f4e030-bc9f-5916-9add-95fbb40491bb",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/search/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "search",
+                ""
+              ]
+            },
+            "description": "Bracketed values only. price: 0+, 50,000+, 100,000+, 200,000+, 400,000+, 600,000+, Any. bedrooms/bathrooms: 0+ \u2026 5+, Any. Anything else is a 400.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"advert_type\": \"For Sale\",\n  \"property_type\": \"House\",\n  \"price\": \"Any\",\n  \"bedrooms\": \"2+\",\n  \"bathrooms\": \"1+\",\n  \"catch_phrase\": \"lake\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete a property",
+          "_postman_id": "20491f28-3150-50de-be17-506712865c34",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/delete/{{propertySlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "delete",
+                "{{propertySlug}}",
+                ""
+              ]
+            },
+            "description": "Run this last \u2014 it removes the property the other calls use."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 204\", function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Enquiries",
+      "_postman_id": "37844058-dd0d-537b-9c28-fbe274257cd6",
+      "description": "Public contact form.",
+      "item": [
+        {
+          "name": "Send an enquiry",
+          "_postman_id": "63914fb4-bbcd-50a5-aa54-b6fe0ddd1605",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/enquiries/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "enquiries",
+                ""
+              ]
+            },
+            "description": "Public contact form. The email is queued to Celery.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ada Smith\",\n  \"email\": \"ada@example.com\",\n  \"phone_number\": \"+254712345678\",\n  \"subject\": \"Viewing request\",\n  \"message\": \"Could I view the Naivasha villa on Saturday morning?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Ratings",
+      "_postman_id": "4f21505c-8db5-5e18-812e-412f26a49722",
+      "description": "Agent reviews.",
+      "item": [
+        {
+          "name": "Review an agent",
+          "_postman_id": "b6292b22-174c-5937-8558-df0387b7a235",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/ratings/{{agentProfileId}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ratings",
+                "{{agentProfileId}}",
+                ""
+              ]
+            },
+            "description": "agentProfileId must be the UUID of a profile with is_agent=true, and cannot be your own. One review per rater per agent.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Answered every question quickly.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Schema",
+      "_postman_id": "c95ae458-0152-56d7-a664-1583df3d9011",
+      "description": "OpenAPI schema and rendered docs.",
+      "item": [
+        {
+          "name": "OpenAPI schema",
+          "_postman_id": "adc933f6-582b-5c38-904d-d81b83f26e81",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/schema/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "schema",
+                ""
+              ]
+            },
+            "description": "Import this URL straight into Postman or Insomnia.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Swagger UI",
+          "_postman_id": "06405018-68d2-5a66-a9c2-7c0159d1a832",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/docs/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docs",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "ReDoc",
+          "_postman_id": "1a53df12-a979-5201-aaae-d4cfc6acd47e",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/redoc/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "redoc",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Errors",
+      "_postman_id": "d1c4f4c9-0795-5977-99d3-bcd8d1c924d7",
+      "description": "Expected failure paths, asserted.",
+      "item": [
+        {
+          "name": "401 \u2014 no token",
+          "_postman_id": "ecf76475-01ab-5fc6-81fa-cd2a02b42ee9",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/profile/me/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "profile",
+                "me",
+                ""
+              ]
+            },
+            "description": "Every protected route denies by default.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "404 \u2014 unknown property",
+          "_postman_id": "e136c96d-2a8c-5754-8bdc-226f8a581bcf",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/details/no-such-listing/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "details",
+                "no-such-listing",
+                ""
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 \u2014 invalid search bracket",
+          "_postman_id": "8e331d76-e578-5d93-9936-5bd73816ce93",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/search/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "search",
+                ""
+              ]
+            },
+            "description": "This used to raise a KeyError and return a 500.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"advert_type\": \"For Barter\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "403 \u2014 updating someone else's property",
+          "_postman_id": "7fa5cf4e-d69a-549f-a693-1640d39157a1",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/properties/update/{{someoneElsesSlug}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "properties",
+                "update",
+                "{{someoneElsesSlug}}",
+                ""
+              ]
+            },
+            "description": "Set someoneElsesSlug to a listing you do not own.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"city\": \"Nakuru\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

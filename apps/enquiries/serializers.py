@@ -6,4 +6,13 @@ from .models import Enquiry
 class EnquirySerializer(serializers.ModelSerializer):
     class Meta:
         model = Enquiry
-        fields = "__all__"
+        fields = [
+            "id",
+            "name",
+            "phone_number",
+            "email",
+            "subject",
+            "message",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]

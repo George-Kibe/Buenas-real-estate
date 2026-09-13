@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -12,9 +13,19 @@ from .serializers import EnquirySerializer
 logger = logging.getLogger(__name__)
 
 
+@extend_schema(
+    request=EnquirySerializer,
+    responses={
+        201: OpenApiResponse(description="Enquiry received"),
+        400: OpenApiResponse(description="Validation error"),
+    },
+    summary="Submit a contact-form enquiry",
+    tags=["enquiries"],
+)
 @api_view(["POST"])
 @permission_classes([permissions.AllowAny])
 def send_enquiry_email(request):
+    """Public contact form. Rate limited by the default anon throttle."""
     serializer = EnquirySerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

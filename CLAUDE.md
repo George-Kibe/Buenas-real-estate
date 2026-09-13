@@ -66,15 +66,37 @@ database.
 
 ### API
 
+- **DRF denies by default.** `DEFAULT_PERMISSION_CLASSES` is `IsAuthenticated`, so a
+  new view is protected unless it opts out with an explicit
+  `permission_classes = [permissions.AllowAny]`. The public ones are the property
+  list, property detail, property search and the enquiry form.
+- **Reads and writes use different serializers.** `PropertySerializer` is entirely
+  read-only (`read_only_fields = fields`); writes go through
+  `PropertyCreateSerializer`, which deliberately excludes `user`, `slug`, `ref_code`
+  and `views`. Never widen that list — `tests/common/test_schema.py` fails if you do.
+  The owner is set in the view with `serializer.save(user=request.user)`.
+- **Validation lives on the model.** Non-negative prices, bedrooms, floors, plot area
+  and bathrooms are `MinValueValidator`s on the fields, which ModelSerializer copies
+  onto the generated serializer. Do not re-implement them as `validate_*` hooks — DRF
+  also trims whitespace and rejects blank CharFields before a hook runs, so those end
+  up unreachable.
+- **Every endpoint must appear in the schema.** Function-based views need an
+  `@extend_schema(...)` with `request`, `responses` and `tags`, or drf-spectacular
+  drops them silently. A `ListAPIView` whose `get_queryset` touches `request.user`
+  also needs a static `queryset = Model.objects.none()` class attribute, which is what
+  schema generation reads.
 - djoser owns the auth routes; `DJOSER["SERIALIZERS"]` points at
   `apps/users/serializers.py`. Changing `UserSerializer` changes `auth/users/me/`.
 - djoser pins `social-auth-app-django<6.0.0`. Do not bump that package past 5.9.0
   without also replacing djoser.
-- Profile responses are wrapped in a `Profile` key by `apps/profiles/renderers.py`.
-  Client code must unwrap it.
-- `PropertySerializer` is read-only in places (several `SerializerMethodField`s), so
-  **writes must use `PropertyCreateSerializer`**. Writing through `PropertySerializer`
-  silently discards the data.
+- `profile/me/` and `profile/update/` wrap their body in a `Profile` key
+  (`apps/profiles/renderers.py`); error bodies and the agent **list** endpoints are
+  not wrapped. Client code must account for both.
+- Country fields serialise as the country *name* ("Kenya"), not the ISO code, in
+  `PropertySerializer`, `ProfileSerializer` and `UserSerializer` alike. The stored
+  value is the code.
+- Throttling is on by default (60/min anon, 1000/min user). `conftest.py` clears the
+  throttle cache between tests; a new test module that bypasses it will flake.
 
 ### Frontend
 
@@ -92,6 +114,9 @@ database.
   the way `properties/page.tsx` wraps its filters.
 - Redux holds **auth state only**. Property data is fetched per-render, not cached in
   the store.
+- **Never hand-write an API path in a component.** `src/lib/endpoints.ts` has one
+  typed function per route; add to it rather than calling `api.post("/...")` inline.
+  Server Components use `src/lib/server-api.ts` instead.
 - Tailwind v4 is configured in CSS (`src/app/globals.css`, `@theme` block). There is no
   `tailwind.config.js` — do not create one.
 - Path alias: `@/*` → `src/*`.
@@ -111,30 +136,27 @@ Everything else is the newest release compatible with Django 6.1.1 / React 19.3.
 ## Before you finish
 
 ```bash
-make lint && make test        # backend
+make lint && make test        # backend — fails under 95% coverage
 cd client && npm run lint && npx tsc --noEmit && npm run build
+```
+
+After changing a view, serializer or URL, also regenerate the shipped API docs:
+
+```bash
+make api-docs                 # docs/openapi.yaml + the Postman collection
+make newman                   # run the collection against the live stack
 ```
 
 `next build` is the check that matters most on the frontend — it catches Server/Client
 Component boundary mistakes that lint and `tsc` both miss.
 
-## Known rough edges
+## Open questions
 
-Pre-existing issues, not regressions. Fix them when you touch the surrounding code:
-
-- `apps/properties/views.py::PropertySearchAPIView` indexes `request.data` directly, so
-  a missing key is a `KeyError` → 500 rather than a 400.
-- `PropertyViewsAPIView` and `upload_property_image` are defined but not routed.
-- `apps/properties/serializers.py` calls `.url` on image fields unconditionally; a
-  listing with a cleared photo raises `ValueError`.
-- `apps/ratings/views.py::create_agent_review` computes the "already reviewed" check
-  against the agent's own pkid rather than the rater's, so it never matches.
-- `Property.price` is `max_digits=8, decimal_places=2`, capping a listing at
-  **999,999.99**. No Kenyan property costs under 1M KES, so realistic listings are
-  rejected with "Ensure that there are no more than 8 digits in total." Widening it
-  needs a migration and a decision about currency units.
-- `PropertyCreateSerializer` declares `country` explicitly, which drops the model's
-  `default="KE"` and makes the field required on create.
-- `apps/profiles/renderers.py` looks for an `errors` key, but DRF uses `detail`, so
-  error responses from profile endpoints get wrapped as `{"Profile": {"detail": ...}}`.
-- There are no API-level tests — the suite covers models only.
+- **`AgentListAPIView` and `TopAgentsListAPIView` require authentication.** On a public
+  property portal, browsing agents anonymously is the more usual product choice. Left
+  as-is because it is a product decision, not a defect.
+- **Enquiries are unauthenticated and only rate-limited.** A captcha or honeypot would
+  be the normal next step before this faces the open internet.
+- **`Property.tax` is a per-listing decimal defaulting to 0.15.** It reads like a
+  system-wide rate that happens to live on each row; worth revisiting if tax rules
+  ever vary.

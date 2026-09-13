@@ -1,5 +1,6 @@
 import random
 import string
+from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
@@ -75,7 +76,13 @@ class Property(TimeStampedUUIDModel):
         default=112,
     )
     price = models.DecimalField(
-        verbose_name=_("Price"), max_digits=8, decimal_places=2, default=0.0
+        verbose_name=_("Price"),
+        # 8 digits capped a listing at 999,999.99, which rejects essentially
+        # every real Kenyan property. 12 allows up to 9,999,999,999.99.
+        max_digits=12,
+        decimal_places=2,
+        default=0.0,
+        validators=[MinValueValidator(Decimal("0"))],
     )
     tax = models.DecimalField(
         verbose_name=_("Property Tax"),
@@ -85,12 +92,26 @@ class Property(TimeStampedUUIDModel):
         help_text="15% property tax charged",
     )
     plot_area = models.DecimalField(
-        verbose_name=_("Plot Area(m^2)"), max_digits=8, decimal_places=2, default=0.0
+        verbose_name=_("Plot Area(m^2)"),
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        validators=[MinValueValidator(Decimal("0"))],
     )
-    total_floors = models.IntegerField(verbose_name=_("Number of floors"), default=0)
-    bedrooms = models.IntegerField(verbose_name=_("Bedrooms"), default=1)
+    total_floors = models.IntegerField(
+        verbose_name=_("Number of floors"),
+        default=0,
+        validators=[MinValueValidator(0)],
+    )
+    bedrooms = models.IntegerField(
+        verbose_name=_("Bedrooms"), default=1, validators=[MinValueValidator(0)]
+    )
     bathrooms = models.DecimalField(
-        verbose_name=_("Bathrooms"), max_digits=4, decimal_places=2, default=1.0
+        verbose_name=_("Bathrooms"),
+        max_digits=4,
+        decimal_places=2,
+        default=1.0,
+        validators=[MinValueValidator(Decimal("0"))],
     )
     advert_type = models.CharField(
         verbose_name=_("Advert Type"),

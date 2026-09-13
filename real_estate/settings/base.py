@@ -52,6 +52,7 @@ THIRD_PARTY_APPS = [
     "djoser",
     "rest_framework_simplejwt",
     "corsheaders",
+    "drf_spectacular",
 ]
 
 LOCAL_APPS = [
@@ -109,6 +110,39 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_FILTER_BACKENDS": [
         "django_filters.rest_framework.DjangoFilterBackend",
+    ],
+    # Deny by default. Public endpoints opt out with an explicit AllowAny.
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": env("THROTTLE_ANON", default="60/min"),
+        "user": env("THROTTLE_USER", default="1000/min"),
+    },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "apps.common.exceptions.api_exception_handler",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Buenas Real Estate API",
+    "DESCRIPTION": (
+        "Property listings, agent profiles, enquiries and ratings for the "
+        "Buenas Real Estate platform."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SCHEMA_PATH_PREFIX": "/api/v1",
+    "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "RoomBracketEnum": "apps.properties.serializers.ROOM_BRACKETS",
+    },
+    "SERVERS": [
+        {"url": "http://localhost:8080", "description": "Local (through nginx)"},
+        {"url": "http://localhost:8000", "description": "Local (runserver)"},
     ],
 }
 

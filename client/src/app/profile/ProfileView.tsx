@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import Spinner from "@/components/Spinner";
-import { api, describeError } from "@/lib/api";
+import { describeError } from "@/lib/api";
+import * as endpoints from "@/lib/endpoints";
 import { mediaUrl } from "@/lib/format";
-import type { Profile, ProfileEnvelope } from "@/lib/types";
+import type { Profile } from "@/lib/types";
 import { useAppSelector } from "@/store/hooks";
 
 export default function ProfileView() {
@@ -22,9 +23,8 @@ export default function ProfileView() {
 
     const load = async () => {
       try {
-        // apps/profiles/renderers.py wraps the payload in a "Profile" key.
-        const { data } = await api.get<ProfileEnvelope>("/profile/me/");
-        if (!cancelled) setProfile(data.Profile);
+        const data = await endpoints.myProfile();
+        if (!cancelled) setProfile(data);
       } catch (requestError) {
         if (!cancelled) setError(describeError(requestError, "Unable to load your profile"));
       } finally {

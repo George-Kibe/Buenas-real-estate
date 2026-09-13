@@ -1,8 +1,9 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 
-import { api, describeError } from "@/lib/api";
+import { describeError } from "@/lib/api";
+import * as endpoints from "@/lib/endpoints";
 import { clearTokens, getAccessToken, storeTokens } from "@/lib/tokens";
-import type { AuthTokens, RegisterPayload, User } from "@/lib/types";
+import type { RegisterPayload, User } from "@/lib/types";
 
 interface AuthState {
   user: User | null;
@@ -24,10 +25,9 @@ export const login = createAsyncThunk<
   { rejectValue: string }
 >("auth/login", async (credentials, { rejectWithValue }) => {
   try {
-    const { data } = await api.post<AuthTokens>("/auth/jwt/create/", credentials);
-    storeTokens(data.access, data.refresh);
-    const { data: user } = await api.get<User>("/auth/users/me/");
-    return user;
+    const tokens = await endpoints.login(credentials.email, credentials.password);
+    storeTokens(tokens.access, tokens.refresh);
+    return await endpoints.currentUser();
   } catch (error) {
     clearTokens();
     return rejectWithValue(describeError(error, "Unable to sign in"));
@@ -38,7 +38,7 @@ export const register = createAsyncThunk<void, RegisterPayload, { rejectValue: s
   "auth/register",
   async (payload, { rejectWithValue }) => {
     try {
-      await api.post("/auth/users/", payload);
+      await endpoints.register(payload);
     } catch (error) {
       return rejectWithValue(describeError(error, "Unable to create the account"));
     }
@@ -51,8 +51,7 @@ export const loadUser = createAsyncThunk<User | null, void, { rejectValue: strin
   async (_, { rejectWithValue }) => {
     if (!getAccessToken()) return null;
     try {
-      const { data } = await api.get<User>("/auth/users/me/");
-      return data;
+      return await endpoints.currentUser();
     } catch (error) {
       clearTokens();
       return rejectWithValue(describeError(error, "Session expired"));

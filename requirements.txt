@@ -17,6 +17,7 @@ django-countries==9.1.0
 django-environ==0.14.0
 django-filter==26.1
 django-phonenumber-field[phonenumbers]==8.5.0
+drf-spectacular==0.30.0
 
 # --- Database / media ---
 psycopg[binary]==3.3.5

@@ -1,49 +1,58 @@
+import logging
+
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .exceptions import NotYourProfile, ProfileNotFound
 from .models import Profile
+from .pagination import ProfilePagination
 from .renderers import ProfileJSONRenderer
 from .serializers import ProfileSerializer, UpdateProfileSerializer
+
+logger = logging.getLogger(__name__)
+
+
+def _agent_queryset(**filters):
+    # prefetch_related on the reviews keeps ProfileSerializer.get_reviews from
+    # issuing one query per agent.
+    return (
+        Profile.objects.select_related("user")
+        .prefetch_related("agent_review__rater", "agent_review__agent__user")
+        .filter(**filters)
+        .order_by("-rating", "user__username")
+    )
 
 
 class AgentListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Profile.objects.filter(is_agent=True)
     serializer_class = ProfileSerializer
+    pagination_class = ProfilePagination
 
-
-"""" function based view of the above
-from rest_framework import api_view, permissions
-
-@api_view(["GET])
-@permission_classes((permissions.IsAuthenticated)):
-def get_all_agents(request):
-    agents = Profile.objects.filter(is_agent=True)
-    serializer = ProfileSerializer(agents, many=True)
-    name_spaced_response = {"agents": serializer.data}
-    return response(name_spaced_response, status=status.HTTP_200_OK)
-"""
+    def get_queryset(self):
+        return _agent_queryset(is_agent=True)
 
 
 class TopAgentsListAPIView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Profile.objects.filter(top_agent=True)
     serializer_class = ProfileSerializer
+    pagination_class = ProfilePagination
+
+    def get_queryset(self):
+        return _agent_queryset(top_agent=True)
 
 
 class GetProfileAPIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     renderer_classes = [ProfileJSONRenderer]
+    serializer_class = ProfileSerializer
 
     def get(self, request):
-        print(self, request)
-        user = self.request.user
-        print(user)
-        if user is None:
-            raise NotYourProfile
-        user_profile = Profile.objects.get(user=user)
+        try:
+            user_profile = Profile.objects.select_related("user").get(user=request.user)
+        except Profile.DoesNotExist:
+            raise ProfileNotFound
+
         serializer = ProfileSerializer(user_profile, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -55,16 +64,20 @@ class UpdateProfileAPIView(APIView):
 
     def patch(self, request, username):
         try:
-            Profile.objects.get(user__username=username)
+            profile = Profile.objects.select_related("user").get(
+                user__username=username
+            )
         except Profile.DoesNotExist:
             raise ProfileNotFound
-        user_name = request.user.username
-        if user_name != username:
+
+        if profile.user != request.user:
             raise NotYourProfile
-        data = request.data
+
         serializer = UpdateProfileSerializer(
-            instance=request.user.profile, data=data, partial=True
+            instance=profile, data=request.data, partial=True
         )
-        serializer.is_valid()
+        # Without raise_exception invalid input was silently saved.
+        serializer.is_valid(raise_exception=True)
         serializer.save()
+        logger.info("Profile updated for %s", username)
         return Response(serializer.data, status=status.HTTP_200_OK)

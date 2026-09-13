@@ -23,7 +23,7 @@ known_first_party = ["apps", "real_estate", "tests"]
 DJANGO_SETTINGS_MODULE = "real_estate.settings.development"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 testpaths = ["tests"]
-addopts = "-p no:warnings --strict-markers"
+addopts = "-p no:warnings --strict-markers --cov=apps --cov-report=term-missing --cov-fail-under=95"
 
 [tool.coverage.run]
 source = ["apps"]

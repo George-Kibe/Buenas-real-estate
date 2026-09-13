@@ -18,6 +18,7 @@ behind nginx in Docker Compose.
 | Client state | Redux Toolkit + React Redux | 2.12.0 / 9.3.0 |
 | Styling | Tailwind CSS | 4.3.3 |
 | Language | Python / TypeScript | 3.14 / 6.0.3 |
+| API docs | drf-spectacular (OpenAPI 3) | 0.30.0 |
 | Proxy | nginx | 1.31 |
 
 ---
@@ -58,7 +59,7 @@ Migrations run automatically on API container start.
 ```
 .
 ├── apps/                    Django applications
-│   ├── common/              Abstract TimeStampedUUIDModel + shared Celery tasks
+│   ├── common/              TimeStampedUUIDModel, Celery tasks, exception handler
 │   ├── users/               Custom email-login User model, manager, admin
 │   ├── profiles/            Profile per user, created by a post_save signal
 │   ├── properties/          Listings, views counter, filtering and search
@@ -75,6 +76,8 @@ Migrations run automatically on API container start.
 │       ├── lib/             axios client, server fetchers, types, formatting
 │       └── store/           Redux Toolkit store and auth slice
 ├── docker/local/            Dockerfiles and start scripts for api, celery, nginx
+├── docs/                    OpenAPI schema + Postman collection and environment
+├── scripts/                 build_postman_collection.py
 ├── tests/                   pytest suite (pytest-django + factory_boy)
 └── docker-compose.yml
 ```
@@ -102,10 +105,12 @@ Send the access token as `Authorization: Bearer <token>`.
 | --- | --- | --- | --- |
 | GET | `profile/me/` | ✔ | Your profile |
 | PATCH | `profile/update/<username>/` | ✔ | Update your own profile |
-| GET | `profile/agents/all/` | ✔ | Every agent |
-| GET | `profile/top-agents/all/` | ✔ | Agents flagged `top_agent` |
+| GET | `profile/agents/all/` | ✔ | Every agent (paginated) |
+| GET | `profile/top-agents/all/` | ✔ | Agents flagged `top_agent` (paginated) |
 
-Profile responses are wrapped in a `Profile` key by `apps/profiles/renderers.py`.
+`profile/me/` and `profile/update/` wrap their body in a `Profile` key
+(`apps/profiles/renderers.py`); error bodies and the list endpoints are not
+wrapped.
 
 ### Properties
 
@@ -114,21 +119,98 @@ Profile responses are wrapped in a `Profile` key by `apps/profiles/renderers.py`
 | GET | `properties/all/` | — | Paginated list, 12 per page |
 | GET | `properties/details/<slug>/` | — | One listing (increments its view count) |
 | GET | `properties/agents/` | ✔ | Your own listings |
-| POST | `properties/create/` | ✔ | Create a listing |
-| PUT | `properties/update/<slug>/` | ✔ | Update your listing |
-| DELETE | `properties/delete/<slug>/` | ✔ | Delete your listing |
+| GET | `properties/views/` | ✔ | Per-IP view records for your listings |
+| POST | `properties/create/` | ✔ | Create a listing — returns **201** |
+| PUT / PATCH | `properties/update/<slug>/` | ✔ | Replace / partially update your listing |
+| POST | `properties/upload-image/<slug>/` | ✔ | Replace photos (multipart) |
+| DELETE | `properties/delete/<slug>/` | ✔ | Delete your listing — returns **204** |
 | POST | `properties/search/` | — | Structured search by bracketed price/bed/bath |
 
-The list endpoint accepts `search` (country, city), `advert_type`, `property_type`,
-`price`, `price__gt`, `price__lt`, `ordering=created_at|-created_at`, `page` and
-`page_size`.
+The list endpoint accepts `search` (country, city, title), `advert_type`,
+`property_type`, `price`, `price__gt`, `price__lt`,
+`ordering=created_at|price|views` (prefix `-` to reverse), `page` and `page_size`.
+
+`create` and `update` ignore `user`, `slug`, `ref_code` and `views` in the body —
+those are server-owned. The owner always comes from the access token.
+
+`search` accepts bracketed strings only: `price` is one of `0+`, `50,000+`,
+`100,000+`, `200,000+`, `400,000+`, `600,000+`, `Any`; `bedrooms` and `bathrooms`
+are `0+` … `5+` or `Any`. Anything else is a 400.
 
 ### Enquiries and ratings
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | POST | `enquiries/` | — | Submit an enquiry; the email is queued to Celery |
-| POST | `ratings/<profile_id>/` | ✔ | Review an agent (1–5 plus a comment) |
+| POST | `ratings/<profile_id>/` | ✔ | Review an agent (1–5 plus a comment) — returns **201** |
+
+`profile_id` is an agent profile's UUID. You cannot review yourself, and only
+once per agent.
+
+### Conventions
+
+- **Auth defaults to required.** Only `properties/all/`, `properties/details/`,
+  `properties/search/` and `enquiries/` are public.
+- **Throttled** at 60 requests/minute for anonymous callers and 1000/minute for
+  signed-in ones (`THROTTLE_ANON` / `THROTTLE_USER`). Over the limit is a 429.
+- **Errors are always JSON**, including unhandled ones, via
+  `apps.common.exceptions.api_exception_handler`.
+
+---
+
+## API documentation and clients
+
+The schema is generated from the URLconf by
+[drf-spectacular](https://drf-spectacular.readthedocs.io/), so it cannot drift
+from the code.
+
+| What | Where |
+| --- | --- |
+| OpenAPI 3 schema (live) | http://localhost:8080/api/v1/schema/ |
+| Swagger UI | http://localhost:8080/api/v1/docs/ |
+| ReDoc | http://localhost:8080/api/v1/redoc/ |
+| Checked-in schema | [docs/openapi.yaml](docs/openapi.yaml) |
+| Postman collection | [docs/buenas-real-estate.postman_collection.json](docs/buenas-real-estate.postman_collection.json) |
+| Postman environment | [docs/buenas-real-estate.postman_environment.json](docs/buenas-real-estate.postman_environment.json) |
+
+### Running the collection
+
+Insomnia imports Postman collections directly, so the same two files work in
+either client.
+
+```bash
+make build       # start the stack
+make seed-demo   # create an activated account and sample data
+```
+
+`seed-demo` prints the values to paste into your environment:
+
+```
+email             = asmith@example.com
+password          = Str0ngPassw0rd!42
+agentProfileId    = <uuid>
+someoneElsesSlug  = agent-owned-show-house
+```
+
+Then in Postman: **Import** both files, pick the *Buenas Real Estate — Local*
+environment, and hit **Run collection**. *Login* stores the tokens, *Create a
+property* stores `propertySlug`, and the detail/update/upload/delete requests
+reuse it. The Errors folder asserts the 401/403/404/400 paths.
+
+From the command line:
+
+```bash
+make newman      # npx newman run, 31 requests with assertions
+```
+
+The collection is generated from
+[scripts/build_postman_collection.py](scripts/build_postman_collection.py) —
+edit that, then `make postman`. `make api-docs` regenerates both the schema and
+the collection.
+
+> The djoser *Register* endpoint creates an **inactive** account and emails an
+> activation link, which an API client cannot follow. That is why the collection
+> logs in with the seeded account and registers a throwaway random identity.
 
 ---
 
@@ -147,10 +229,17 @@ make makemigrations    # generate migrations after a model change
 make superuser         # create an admin user
 make estate-db         # psql shell
 
-make test              # pytest with coverage
+make seed-demo         # activated demo account + sample data
+
+make test              # pytest with coverage (fails under 95%)
 make lint              # flake8 + black --check + isort --check
 make black             # reformat
 make isort             # sort imports
+
+make schema            # regenerate docs/openapi.yaml
+make postman           # regenerate the Postman collection
+make api-docs          # both of the above
+make newman            # run the collection against the stack
 
 make client-lint       # eslint
 make client-build      # next build
@@ -190,12 +279,32 @@ The client reads two environment variables:
 
 ```bash
 make test                        # in Docker
-pytest --cov=.                   # locally, against a running Postgres
+pytest                           # locally, against a running Postgres
 ```
 
-The suite uses `pytest-django` with `factory_boy` factories in `tests/factories.py`,
-registered as fixtures in `conftest.py` (so `UserFactory` becomes `user_factory`).
-Coverage settings live in `pyproject.toml`.
+**156 tests, 100% statement coverage of `apps/`.** The run fails below 95%
+(`--cov-fail-under=95` in `pyproject.toml`), so coverage cannot quietly rot.
+
+```
+tests/
+├── common/       exception handler, Celery email task, seed_demo, schema
+├── enquiries/    the public contact form
+├── profiles/     profile read/update, agent lists, the Profile wrapper
+├── properties/   every route in the app, plus slug/ref_code model behaviour
+├── ratings/      agent reviews and the aggregate recalculation
+└── users/        djoser auth, JWT lifecycle, UserSerializer
+```
+
+The suite uses `pytest-django` with `factory_boy` factories in
+`tests/factories.py`, registered as fixtures in `conftest.py` (so `UserFactory`
+becomes `user_factory`). `conftest.py` also provides `api_client`, `auth_client`,
+`other_client`, `listing` and `agent_profile`, and clears the throttle cache
+between tests.
+
+`tests/common/test_schema.py` asserts every endpoint still appears in the
+generated OpenAPI schema and that `user`, `slug`, `ref_code` and `views` stay
+out of the writable property payload — so a permissions regression fails the
+build.
 
 ---
 
@@ -213,6 +322,7 @@ Every setting is read from the environment through `django-environ`; see
 | `EMAIL_*`, `DEFAULT_FROM_EMAIL` | Feed the `MAILERS` setting |
 | `CELERY_BROKER`, `CELERY_BACKEND` | Redis URLs |
 | `CELERY_TASK_ALWAYS_EAGER` | `True` runs tasks inline, with no worker |
+| `THROTTLE_ANON`, `THROTTLE_USER` | DRF rate limits, e.g. `60/min` |
 
 ### Email
 

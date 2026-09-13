@@ -4,7 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-import { api, describeError } from "@/lib/api";
+import { describeError } from "@/lib/api";
+import * as endpoints from "@/lib/endpoints";
 import type { EnquiryPayload } from "@/lib/types";
 
 export default function EnquiryForm() {
@@ -26,7 +27,7 @@ export default function EnquiryForm() {
       const payload: EnquiryPayload = { ...form };
       if (!payload.phone_number) delete payload.phone_number;
 
-      await api.post("/enquiries/", payload);
+      await endpoints.sendEnquiry(payload);
       toast.success("Thank you — your enquiry is on its way.");
       setForm({ name: "", email: "", phone_number: "", subject: "", message: "" });
     } catch (error) {

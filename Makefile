@@ -6,7 +6,8 @@ endif
 
 .PHONY: build up down show-logs migrate makemigrations superuser collectstatic \
         down-v volume estate-db test test-html flake8 black-check black-diff black \
-        isort-check isort-diff isort lint client-install client-lint client-build shell
+        isort-check isort-diff isort lint client-install client-lint client-build \
+        shell seed-demo schema postman api-docs newman
 
 # --- Stack ---
 build:
@@ -39,6 +40,26 @@ collectstatic:
 
 shell:
 	docker compose exec api python manage.py shell
+
+# Activated demo account + sample data, so the API collection runs end to end.
+seed-demo:
+	docker compose exec api python manage.py seed_demo
+
+# --- API documentation ---
+# Regenerate docs/openapi.yaml from the live URLconf.
+schema:
+	docker compose exec api python manage.py spectacular --file docs/openapi.yaml
+
+# Regenerate the Postman collection and environment from scripts/.
+postman:
+	python3 scripts/build_postman_collection.py
+
+api-docs: schema postman
+
+# Execute the collection against the running stack (needs Node).
+newman:
+	npx --yes newman@6 run docs/buenas-real-estate.postman_collection.json \
+		-e docs/buenas-real-estate.postman_environment.json
 
 # --- Database ---
 volume:
