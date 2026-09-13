@@ -1,10 +1,10 @@
 import random
 import string
 
-from autoslug import AutoSlugField
 from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 from django_countries.fields import CountryField
 
@@ -13,7 +13,7 @@ from apps.common.models import TimeStampedUUIDModel
 User = get_user_model()
 
 
-class PropertyPublishedManager(models.Manager): #managed listed or unlisted properties
+class PropertyPublishedManager(models.Manager):  # managed listed or unlisted properties
     def get_queryset(self):
         return (
             super(PropertyPublishedManager, self)
@@ -44,7 +44,9 @@ class Property(TimeStampedUUIDModel):
     )
 
     title = models.CharField(verbose_name=_("Property Title"), max_length=250)
-    slug = AutoSlugField(populate_from="title", unique=True, always_update=True)
+    slug = models.SlugField(
+        verbose_name=_("Slug"), max_length=280, unique=True, blank=True
+    )
     ref_code = models.CharField(
         verbose_name=_("Property Reference Code"),
         max_length=255,
@@ -142,13 +144,34 @@ class Property(TimeStampedUUIDModel):
         verbose_name = "Property"
         verbose_name_plural = "Properties"
 
-    def save(self, *args, **kwargs):
+    def _generate_unique_slug(self):
+        """Slugify the title, appending a counter until the slug is free."""
+        base = slugify(self.title)[:250] or "property"
+        slug = base
+        counter = 1
+        siblings = (
+            Property.objects.exclude(pkid=self.pkid)
+            if self.pkid
+            else Property.objects.all()
+        )
+        while siblings.filter(slug=slug).exists():
+            counter += 1
+            slug = f"{base}-{counter}"
+        return slug
+
+    @staticmethod
+    def _generate_ref_code():
+        return "".join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
+    def save(self, **kwargs):
+        # Django 6.0 made Model.save() keyword-only.
         self.title = str.title(self.title)
         self.description = str.capitalize(self.description)
-        self.ref_code = "".join(
-            random.choices(string.ascii_uppercase + string.digits, k=10)
-        )
-        super(Property, self).save(*args, **kwargs)
+        if not self.ref_code:
+            # Assigned once, on creation: the reference code is what agents quote.
+            self.ref_code = self._generate_ref_code()
+        self.slug = self._generate_unique_slug()
+        super().save(**kwargs)
 
     @property
     def final_property_price(self):

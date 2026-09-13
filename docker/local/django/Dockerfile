@@ -1,49 +1,33 @@
-FROM python:3.11.0-slim-buster
+# Django 6.1 requires Python 3.12+.
+FROM python:3.14-slim-trixie
 
-ENV APP_HOME=/app
-RUN mkdir $APP_HOME
-RUN mkdir $APP_HOME/staticfiles
-WORKDIR $APP_HOME
-
-LABEL maintainer='georgekibew@gmail.com'
+LABEL maintainer="georgekibew@gmail.com"
 LABEL website="https://www.comparables.co.ke"
-LABEL decription="Development image for Real Estate Project"
+LABEL description="Development image for the Buenas Real Estate API"
 
-#prevent python generate .pwc files
-ENV PYTHONDONTWRITEBYTECODE 1
+ENV APP_HOME=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
-ENV PYTHONUNBUFFERED 1
+WORKDIR $APP_HOME
+RUN mkdir -p $APP_HOME/staticfiles $APP_HOME/mediafiles $APP_HOME/logs
 
+# psycopg[binary] ships its own libpq, so no build toolchain or libpq-dev here.
 RUN apt-get update \
-  && apt-get install -y build-essential \
-  && apt-get install -y libpq-dev \
-  && apt-get install -y gettext \
-  && apt-get -y install netcat gcc postgresql \
+  && apt-get install -y --no-install-recommends gettext \
   && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
   && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --upgrade pip
-
-COPY ./requirements.txt /app/requirements.txt 
-
-RUN pip3 install -r requirements.txt
+COPY ./requirements.txt ./requirements-dev.txt $APP_HOME/
+RUN pip install -r requirements-dev.txt
 
 COPY ./docker/local/django/entrypoint /entrypoint
-RUN sed -i 's/\r$//g' /entrypoint
-RUN chmod +x /entrypoint
-
 COPY ./docker/local/django/start /start
-RUN sed -i 's/\r$//g' /start
-RUN chmod +x /start
-
-
 COPY ./docker/local/django/celery/worker/start /start-celeryworker
-RUN sed -i 's/\r$//g' /start-celeryworker
-RUN chmod +x /start-celeryworker
-
 COPY ./docker/local/django/celery/flower/start /start-flower
-RUN sed -i 's/\r$//g' /start-flower
-RUN chmod +x /start-flower
+RUN sed -i 's/\r$//g' /entrypoint /start /start-celeryworker /start-flower \
+  && chmod +x /entrypoint /start /start-celeryworker /start-flower
 
-
-ENTRYPOINT [ "/entrypoint"]
+ENTRYPOINT ["/entrypoint"]

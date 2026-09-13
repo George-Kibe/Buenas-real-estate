@@ -1,6 +1,38 @@
 [tool.black]
+line-length = 88
+target-version = ["py312", "py313", "py314"]
 extend-exclude = '''
 /(
-    | env
+    \.git
+  | migrations
+  | staticfiles
+  | mediafiles
+  | client
+  | env
+  | venv
 )/
 '''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+skip_glob = ["*/migrations/*", "client/*", "*env*", "*venv*"]
+known_first_party = ["apps", "real_estate", "tests"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "real_estate.settings.development"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+testpaths = ["tests"]
+addopts = "-p no:warnings --strict-markers"
+
+[tool.coverage.run]
+source = ["apps"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*apps.py",
+    "*__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true

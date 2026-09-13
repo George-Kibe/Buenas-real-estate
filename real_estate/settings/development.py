@@ -1,37 +1,32 @@
-from .base import *
+"""Development settings: local Docker stack, console email, verbose errors."""
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_BACKEND = "djcelery_email.backends.CeleryEmailBackend"
-EMAIL_HOST = env("EMAIL_HOST")
-EMAIL_USE_TLS = True
-EMAIL_PORT = env ("EMAIL_PORT")
-EMAIL_HOST_USER = env("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = "info@buenasconsultants.co.ke"
-DOMAIN = env("DOMAIN")
-SITE_NAME = "BUENAS REAL ESTATE"
+from .base import *  # noqa: F401,F403
+from .base import env
 
-# Database
-# https://docs.djangoproject.com/en/4.0/ref/settings/#databases
-"""
+# --- Email ---
+# Defaults to the console backend, so mail is printed to the container log.
+MAILERS = mailer_config(  # noqa: F405
+    env("EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+)
+DOMAIN = env("DOMAIN", default="localhost:3000")
+
+# --- Database ---
+# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+# The postgresql backend talks to psycopg 3 when it is installed.
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-"""
-DATABASES = {
-    'default': {
-        'ENGINE': env("POSTGRES_ENGINE"),
-        'NAME': env("POSTGRES_DB"),
-        'USER': env("POSTGRES_USER"),
-        'PASSWORD':env("POSTGRES_PASSWORD"),
-        'HOST':env("PG_HOST"),
-        'PORT':env('PG_PORT'),
+    "default": {
+        "ENGINE": env("POSTGRES_ENGINE", default="django.db.backends.postgresql"),
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("PG_HOST"),
+        "PORT": env("PG_PORT"),
     }
 }
 
+# --- Celery ---
 CELERY_BROKER_URL = env("CELERY_BROKER")
 CELERY_RESULT_BACKEND = env("CELERY_BACKEND")
-CELERY_TIMEZONE = "Africa/Nairobi"
+CELERY_TIMEZONE = TIME_ZONE  # noqa: F405
+# Run tasks inline when no worker is available (tests, bare `runserver`).
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)

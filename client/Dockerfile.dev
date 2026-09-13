@@ -1,18 +1,17 @@
-ARG NODE_VERSION=18-alpine3.18
+# Next.js 16 requires Node >= 20.9; 24 is the active LTS line.
+ARG NODE_VERSION=24-alpine
 
-FROM node:${NODE_VERSION} AS node
+FROM node:${NODE_VERSION}
 
-FROM node as client-local-build
-
-LABEL version="1.0"
-LABEL description="React Frontend for the Real Estate API"
+LABEL version="2.0"
+LABEL description="Next.js frontend for the Buenas Real Estate API"
 
 WORKDIR /app
 
 COPY ./package*.json ./
-
 RUN npm install
 
 COPY . /app
 
-CMD ["npm", "run", "start"]
+EXPOSE 3000
+CMD ["npm", "run", "dev"]

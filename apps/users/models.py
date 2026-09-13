@@ -15,7 +15,9 @@ class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(verbose_name=_("Username"), max_length=255, unique=True)
     first_name = models.CharField(verbose_name=_("First Name"), max_length=255)
     last_name = models.CharField(verbose_name=_("Last Name"), max_length=255)
-    email = models.EmailField(verbose_name=_("Email Address"), max_length=255, unique=True)
+    email = models.EmailField(
+        verbose_name=_("Email Address"), max_length=255, unique=True
+    )
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     date_joined = models.DateTimeField(default=timezone.now)
@@ -31,40 +33,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
-    
+
     @property
     def get_full_name(self):
         return f"{self.first_name} {self.last_name}"
+
     def get_short_name(self):
         return self.username
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

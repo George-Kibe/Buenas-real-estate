@@ -1,8 +1,10 @@
 import factory
-from apps.profiles.models import Profile
+from django.conf import settings
 from django.db.models.signals import post_save
 from faker import Factory as FakerFactory
-from real_estate.settings.base import AUTH_USER_MODEL
+
+from apps.profiles.models import Profile
+from apps.properties.models import Property
 
 faker = FakerFactory.create()
 
@@ -16,7 +18,7 @@ class ProfileFactory(factory.django.DjangoModelFactory):
     profile_photo = factory.LazyAttribute(
         lambda x: faker.file_extension(category="image")
     )
-    gender = factory.LazyAttribute(lambda x: f"other")
+    gender = "Other"
     country = factory.LazyAttribute(lambda x: faker.country_code())
     city = factory.LazyAttribute(lambda x: faker.city())
     is_buyer = False
@@ -35,13 +37,13 @@ class UserFactory(factory.django.DjangoModelFactory):
     first_name = factory.LazyAttribute(lambda x: faker.first_name())
     last_name = factory.LazyAttribute(lambda x: faker.last_name())
     username = factory.LazyAttribute(lambda x: faker.first_name())
-    email = factory.LazyAttribute(lambda x: f"georgekibewambui@gmail.com")
+    email = factory.LazyAttribute(lambda x: faker.email())
     password = factory.LazyAttribute(lambda x: faker.password())
     is_active = True
     is_staff = False
 
     class Meta:
-        model = AUTH_USER_MODEL
+        model = settings.AUTH_USER_MODEL
 
     @classmethod
     def _create(cls, model_class, *args, **kwargs):
@@ -50,3 +52,20 @@ class UserFactory(factory.django.DjangoModelFactory):
             return manager.create_superuser(*args, **kwargs)
         else:
             return manager.create_user(*args, **kwargs)
+
+
+class PropertyFactory(factory.django.DjangoModelFactory):
+    user = factory.SubFactory("tests.factories.UserFactory")
+    title = factory.LazyAttribute(lambda x: faker.sentence(nb_words=4))
+    description = factory.LazyAttribute(lambda x: faker.paragraph(nb_sentences=2))
+    country = "KE"
+    city = factory.LazyAttribute(lambda x: faker.city())
+    price = factory.LazyAttribute(
+        lambda x: faker.pydecimal(left_digits=5, right_digits=2, positive=True)
+    )
+    advert_type = Property.AdvertType.FOR_SALE
+    property_type = Property.PropertyType.HOUSE
+    published_status = True
+
+    class Meta:
+        model = Property

@@ -9,6 +9,7 @@ from .models import Rating
 
 User = get_user_model()
 
+
 # create agent review
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
@@ -34,7 +35,7 @@ def create_agent_review(request, profile_id):
         return Response(formatted_response, status=status.HTTP_400_BAD_REQUEST)
 
     else:
-        review = Rating.objects.create(
+        Rating.objects.create(
             rater=request.user,
             agent=agent_profile,
             rating=data["rating"],

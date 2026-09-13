@@ -1,4 +1,4 @@
-version: "3.3"
+# The top-level `version` key is obsolete in Compose v2+.
 
 services:
   api:
@@ -12,13 +12,13 @@ services:
       - media_volume:/app/mediafiles
     expose:
       - "8000"
-    # ports:
-    #   - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - postgres-db
-      - redis
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - estate-react
 
@@ -30,24 +30,46 @@ services:
     volumes:
       - ./client:/app
       - /app/node_modules
+      - /app/.next
+    expose:
+      - "3000"
+    environment:
+      # Browser requests go through nginx; SSR talks to the api service directly.
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+      - INTERNAL_API_URL=http://api:8000/api/v1
+      - WATCHPACK_POLLING=true
+    depends_on:
+      - api
     networks:
       - estate-react
 
   postgres-db:
-    image: postgres:12.0-alpine
+    image: postgres:18-alpine
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      # Postgres 18 expects a single mount at /var/lib/postgresql, not the
+      # /var/lib/postgresql/data path used by earlier images.
+      - postgres_data:/var/lib/postgresql
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
-      - estate-react 
+      - estate-react
 
   redis:
-    image: redis:5-alpine
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - estate-react
 
@@ -61,8 +83,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - estate-react
 
@@ -78,23 +102,24 @@ services:
     ports:
       - "5557:5555"
     depends_on:
+      - celery_worker
       - redis
-      - postgres-db
     networks:
       - estate-react
 
   nginx:
     restart: always
-    depends_on:
-      - api
-    volumes:
-      - static_volume:/app/staticfiles
-      - media_volume:/app/mediafiles
     build:
       context: ./docker/local/nginx
       dockerfile: Dockerfile
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
     ports:
       - "8080:80"
+    depends_on:
+      - api
+      - client
     networks:
       - estate-react
 

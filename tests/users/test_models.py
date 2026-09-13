@@ -18,16 +18,18 @@ def test_user_full_name(base_user):
     assert base_user.get_full_name == full_name
 
 
-def test_base_user_email_is_normalized(base_user):
+def test_base_user_email_is_normalized(db, user_factory):
     """Test that a new users email is normalized"""
-    email = "georgeKIBEWAMBui@GMAIl.com"
-    assert base_user.email == email.lower()
+    email = "georgeKIBEWAMBui@example.COM"
+    user = user_factory.create(email=email)
+    assert user.email == "georgeKIBEWAMBui@example.com"
 
 
-def test_super_user_email_is_normalized(super_user):
+def test_super_user_email_is_normalized(db, user_factory):
     """Test that an admin users email is normalized"""
-    email = "georgeKIBEWAMBui@GMAIl.com"
-    assert super_user.email == email.lower()
+    email = "georgeKIBEWAMBui@example.COM"
+    user = user_factory.create(email=email, is_superuser=True, is_staff=True)
+    assert user.email == "georgeKIBEWAMBui@example.com"
 
 
 def test_super_user_is_not_staff(user_factory):

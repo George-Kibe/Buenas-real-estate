@@ -1,21 +1,24 @@
 import logging
 
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from apps.profiles.models import Profile
-from real_estate.settings.base import AUTH_USER_MODEL
 
 logger = logging.getLogger(__name__)
 
-@receiver(post_save, sender=AUTH_USER_MODEL)
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        print("First Signal: ", instance)
         Profile.objects.create(user=instance)
-    
-@receiver(post_save, sender=AUTH_USER_MODEL)
+        logger.info("Created a profile for %s", instance)
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def save_user_profile(sender, instance, **kwargs):
-    print("Second Signal: ", instance)
-    instance.profile.save()
-    logger.info(f"{instance}'s profile created successfully")
+    # A user created outside the signal (fixtures, data migrations) may not
+    # have a profile yet; get_or_create keeps this idempotent.
+    profile, _created = Profile.objects.get_or_create(user=instance)
+    profile.save()

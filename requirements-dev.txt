@@ -1,0 +1,18 @@
+# Development / CI dependencies. Installs everything in requirements.txt first.
+-r requirements.txt
+
+# --- Testing ---
+pytest==9.1.1
+pytest-django==4.14.0
+pytest-cov==7.1.0
+pytest-factoryboy==2.8.1
+factory-boy==3.3.3
+Faker==40.38.0
+
+# --- Linting / formatting ---
+black==26.5.1
+flake8==7.3.0
+isort==9.0.1
+
+# --- Celery worker autoreload (watchmedo) ---
+watchdog==6.0.0

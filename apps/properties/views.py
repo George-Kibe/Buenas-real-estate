@@ -1,7 +1,6 @@
 import logging
 
 import django_filters
-from django.db.models import query
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -11,8 +10,11 @@ from rest_framework.views import APIView
 from .exceptions import PropertyNotFound
 from .models import Property, PropertyViews
 from .pagination import PropertyPagination
-from .serializers import (PropertyCreateSerializer, PropertySerializer,
-                          PropertyViewSerializer)
+from .serializers import (
+    PropertyCreateSerializer,
+    PropertySerializer,
+    PropertyViewSerializer,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +54,7 @@ class ListAllPropertiesAPIView(generics.ListAPIView):
 
 
 class ListAgentsPropertiesAPIView(generics.ListAPIView):
-    #properties for a specific user, has to be authorised
+    # properties for a specific user, has to be authorised
     serializer_class = PropertySerializer
     pagination_class = PropertyPagination
     filter_backends = [
@@ -76,9 +78,12 @@ class PropertyViewsAPIView(generics.ListAPIView):
 
 
 class PropertyDetailView(APIView):
-    #a view is added when you click the detailed view of a property
+    # a view is added when you click the detailed view of a property
     def get(self, request, slug):
-        property = Property.objects.get(slug=slug)
+        try:
+            property = Property.objects.get(slug=slug)
+        except Property.DoesNotExist:
+            raise PropertyNotFound
         # Capture user ip address
         x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
         if x_forwarded_for:
@@ -96,7 +101,8 @@ class PropertyDetailView(APIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-# update a property function 
+
+# update a property function
 @api_view(["PUT"])
 @permission_classes([permissions.IsAuthenticated])
 def update_property_api_view(request, slug):
@@ -111,14 +117,14 @@ def update_property_api_view(request, slug):
             {"error": "You can't update or edit a property that doesn't belong to you"},
             status=status.HTTP_403_FORBIDDEN,
         )
-    if request.method == "PUT":
-        data = request.data
-        serializer = PropertySerializer(property, data, many=False)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)
+    data = request.data
+    serializer = PropertyCreateSerializer(property, data=data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
 
-# create a property function 
+
+# create a property function
 @api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def create_property_api_view(request):
@@ -136,7 +142,8 @@ def create_property_api_view(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# delete a property function 
+
+# delete a property function
 @api_view(["DELETE"])
 @permission_classes([permissions.IsAuthenticated])
 def delete_property_api_view(request, slug):
@@ -161,9 +168,11 @@ def delete_property_api_view(request, slug):
             data["failure"] = "Deletion failed"
         return Response(data=data)
 
-# upload property images 
+
+# upload property images
 @api_view(["POST"])
-def uploadPropertyImage(request):
+@permission_classes([permissions.IsAuthenticated])
+def upload_property_image(request):
     data = request.data
 
     property_id = data["property_id"]

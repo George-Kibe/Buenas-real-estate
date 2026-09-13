@@ -4,8 +4,15 @@
 .DS_Store
 staticfiles
 mediafiles
-migrations
+logs/
+
+# Frontend (Next.js)
 client/node_modules
+client/.next
+client/out
+client/next-env.d.ts
+client/tsconfig.tsbuildinfo
+client/.env*.local
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
